@@ -116,7 +116,7 @@ export default function DashboardPage() {
       <div className="bg-white border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <nav className="flex space-x-8">
-            {['overview', 'nodes', 'meters', 'analytics'].map((tab) => (
+            {['overview', 'nodes', 'meters', 'customers', 'analytics'].map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
@@ -265,6 +265,19 @@ export default function DashboardPage() {
           <div className="bg-white rounded-lg shadow p-6">
             <h2 className="text-lg font-medium text-gray-900 mb-4">Meters Management</h2>
             <p className="text-gray-500">Meter configuration will be available once nodes are assigned to sites.</p>
+          </div>
+        )}
+
+        {activeTab === 'customers' && (
+          <div className="bg-white rounded-lg shadow p-6">
+            <h2 className="text-lg font-medium text-gray-900 mb-4">Customer & Site Management</h2>
+            <p className="text-gray-500 mb-4">Manage your customers, sites, and node assignments.</p>
+            <a
+              href="/dashboard/customers"
+              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 inline-block"
+            >
+              Go to Customer Management →
+            </a>
           </div>
         )}
 
