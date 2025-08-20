@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { sql } from '@vercel/postgres';
+import { supabaseAdmin } from '../../../../lib/supabase';
 import { verifyNodeApiKey } from '../../../../lib/auth';
 
 export async function POST(request: NextRequest) {
@@ -23,40 +23,56 @@ export async function POST(request: NextRequest) {
     }
     
     // Check if node exists
-    const { rows: existingNodes } = await sql`
-      SELECT id, site_id, name, status FROM nodes WHERE node_id = ${nodeId}
-    `;
+    const { data: existingNode, error: fetchError } = await supabaseAdmin
+      .from('nodes')
+      .select('id, site_id, name, status')
+      .eq('node_id', nodeId)
+      .single();
     
-    if (existingNodes.length > 0) {
+    if (existingNode && !fetchError) {
       // Update existing node
-      const node = existingNodes[0];
-      await sql`
-        UPDATE nodes 
-        SET last_seen = CURRENT_TIMESTAMP,
-            version = ${version || null},
-            ip_address = ${ipAddress || null},
-            status = 'active'
-        WHERE node_id = ${nodeId}
-      `;
+      const { error: updateError } = await supabaseAdmin
+        .from('nodes')
+        .update({
+          last_seen: new Date().toISOString(),
+          version: version || null,
+          ip_address: ipAddress || null,
+          status: 'active'
+        })
+        .eq('node_id', nodeId);
+      
+      if (updateError) {
+        throw updateError;
+      }
       
       return NextResponse.json({
         nodeId,
         status: 'updated',
-        siteId: node.site_id,
-        name: node.name
+        siteId: existingNode.site_id,
+        name: existingNode.name
       });
     } else {
       // Register new node
-      const { rows: newNodes } = await sql`
-        INSERT INTO nodes (node_id, version, ip_address, last_seen, status)
-        VALUES (${nodeId}, ${version || null}, ${ipAddress || null}, CURRENT_TIMESTAMP, 'pending')
-        RETURNING id
-      `;
+      const { data: newNode, error: insertError } = await supabaseAdmin
+        .from('nodes')
+        .insert({
+          node_id: nodeId,
+          version: version || null,
+          ip_address: ipAddress || null,
+          last_seen: new Date().toISOString(),
+          status: 'pending'
+        })
+        .select('id')
+        .single();
+      
+      if (insertError) {
+        throw insertError;
+      }
       
       return NextResponse.json({
         nodeId,
         status: 'registered',
-        id: newNodes[0].id,
+        id: newNode.id,
         message: 'Node registered. Awaiting site assignment.'
       });
     }

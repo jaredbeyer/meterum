@@ -1,6 +1,6 @@
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
-import { sql } from '@vercel/postgres';
+import { supabaseAdmin } from './supabase';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 const NODE_API_KEY = process.env.NODE_API_KEY || 'node-secret-key';
@@ -21,32 +21,30 @@ export interface AuthResult {
 
 export async function authenticateUser(username: string, password: string): Promise<AuthResult> {
   try {
-    const { rows } = await sql`
-      SELECT id, username, email, password_hash, role 
-      FROM users 
-      WHERE username = ${username} OR email = ${username}
-    `;
+    const { data, error } = await supabaseAdmin
+      .from('users')
+      .select('id, username, email, password_hash, role')
+      .or(`username.eq.${username},email.eq.${username}`)
+      .single();
     
-    if (rows.length === 0) {
+    if (error || !data) {
       return { success: false, error: 'User not found' };
     }
     
-    const user = rows[0];
-    const isValid = await bcrypt.compare(password, user.password_hash);
+    const isValid = await bcrypt.compare(password, data.password_hash);
     
     if (!isValid) {
       return { success: false, error: 'Invalid password' };
     }
     
     // Update last login
-    await sql`
-      UPDATE users 
-      SET last_login = CURRENT_TIMESTAMP 
-      WHERE id = ${user.id}
-    `;
+    await supabaseAdmin
+      .from('users')
+      .update({ last_login: new Date().toISOString() })
+      .eq('id', data.id);
     
     const token = jwt.sign(
-      { userId: user.id, username: user.username, role: user.role },
+      { userId: data.id, username: data.username, role: data.role },
       JWT_SECRET,
       { expiresIn: '7d' }
     );
@@ -54,10 +52,10 @@ export async function authenticateUser(username: string, password: string): Prom
     return {
       success: true,
       user: {
-        id: user.id,
-        username: user.username,
-        email: user.email,
-        role: user.role
+        id: data.id,
+        username: data.username,
+        email: data.email,
+        role: data.role
       },
       token
     };
