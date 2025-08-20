@@ -72,16 +72,16 @@ export async function GET(
       onlineDevices: devices?.filter(d => d.is_online).length || 0,
       totalPoints: devices?.reduce((sum, d) => sum + (d.bacnet_points?.length || 0), 0) || 0,
       controllablePoints: devices?.reduce((sum, d) => 
-        sum + (d.bacnet_points?.filter(p => p.is_writable).length || 0), 0) || 0,
+        sum + (d.bacnet_points?.filter((p: any) => p.is_writable).length || 0), 0) || 0,
       categories: {
         hvac: devices?.reduce((sum, d) => 
-          sum + (d.bacnet_points?.filter(p => p.point_category === 'HVAC').length || 0), 0) || 0,
+          sum + (d.bacnet_points?.filter((p: any) => p.point_category === 'HVAC').length || 0), 0) || 0,
         lighting: devices?.reduce((sum, d) => 
-          sum + (d.bacnet_points?.filter(p => p.point_category === 'Lighting').length || 0), 0) || 0,
+          sum + (d.bacnet_points?.filter((p: any) => p.point_category === 'Lighting').length || 0), 0) || 0,
         energy: devices?.reduce((sum, d) => 
-          sum + (d.bacnet_points?.filter(p => p.point_category === 'Energy').length || 0), 0) || 0,
+          sum + (d.bacnet_points?.filter((p: any) => p.point_category === 'Energy').length || 0), 0) || 0,
         security: devices?.reduce((sum, d) => 
-          sum + (d.bacnet_points?.filter(p => p.point_category === 'Security').length || 0), 0) || 0
+          sum + (d.bacnet_points?.filter((p: any) => p.point_category === 'Security').length || 0), 0) || 0
       }
     };
     

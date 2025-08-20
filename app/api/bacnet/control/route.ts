@@ -192,7 +192,7 @@ export async function GET(request: NextRequest) {
       );
     }
     
-    let history = [];
+    let history: any[] = [];
     if (includeHistory) {
       // Get point history
       const cutoffTime = new Date();

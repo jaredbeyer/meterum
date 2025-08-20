@@ -68,7 +68,7 @@ export async function GET(
     }
     
     // Format commands for the node
-    const formattedCommands = (commands || []).map(cmd => ({
+    const formattedCommands = (commands || []).map((cmd: any) => ({
       id: cmd.id,
       command_type: cmd.command_type,
       target_value: cmd.target_value,

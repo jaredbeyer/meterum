@@ -132,7 +132,7 @@ export async function GET(request: NextRequest) {
       onlineDevices: devices?.filter(d => d.is_online).length || 0,
       totalPoints: devices?.reduce((sum, d) => sum + (d.bacnet_points?.length || 0), 0) || 0,
       writablePoints: devices?.reduce((sum, d) => 
-        sum + (d.bacnet_points?.filter(p => p.is_writable).length || 0), 0) || 0
+        sum + (d.bacnet_points?.filter((p: any) => p.is_writable).length || 0), 0) || 0
     };
     
     return NextResponse.json({
