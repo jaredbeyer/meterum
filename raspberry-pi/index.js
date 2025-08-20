@@ -92,6 +92,32 @@ function getNodeId() {
   }
 }
 
+// Get MAC address for UUID generation
+function getMacAddress() {
+  try {
+    // Try to get primary network interface MAC
+    const macAddress = execSync('cat /sys/class/net/eth0/address', { encoding: 'utf8' }).trim();
+    return macAddress.toUpperCase();
+  } catch (error) {
+    // Fallback to any available interface
+    try {
+      const { networkInterfaces } = require('os');
+      const nets = networkInterfaces();
+      
+      for (const name of Object.keys(nets)) {
+        for (const net of nets[name]) {
+          if (net.family === 'IPv4' && !net.internal && net.mac !== '00:00:00:00:00:00') {
+            return net.mac.toUpperCase();
+          }
+        }
+      }
+    } catch (fallbackError) {
+      logger.warn('Could not determine MAC address', fallbackError);
+    }
+  }
+  return null;
+}
+
 // Get local IP address
 function getLocalIpAddress() {
   try {
@@ -154,13 +180,15 @@ async function registerNode() {
   try {
     nodeId = getNodeId();
     const ipAddress = getLocalIpAddress();
+    const macAddress = getMacAddress();
     
-    logger.info('Registering node:', { nodeId, ipAddress });
+    logger.info('Registering node:', { nodeId, ipAddress, macAddress });
     
     const response = await makeRequest('POST', '/api/nodes/register', {
       nodeId,
       version: '1.0.0',
-      ipAddress
+      ipAddress,
+      macAddress
     });
     
     logger.info('Node registration response:', response);

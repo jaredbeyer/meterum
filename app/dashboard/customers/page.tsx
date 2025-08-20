@@ -6,6 +6,7 @@ import toast, { Toaster } from 'react-hot-toast';
 
 interface Customer {
   id: number;
+  uuid: string;
   name: string;
   contact_email: string;
   contact_phone: string;
@@ -16,6 +17,7 @@ interface Customer {
 
 interface Site {
   id: number;
+  uuid: string;
   customer_id: number;
   name: string;
   address: string;
@@ -24,13 +26,16 @@ interface Site {
   created_at: string;
   customers?: {
     id: number;
+    uuid: string;
     name: string;
   };
 }
 
 interface Node {
   id: number;
+  uuid: string;
   node_id: string;
+  mac_address?: string;
   site_id: number | null;
   name: string;
   status: string;
@@ -347,8 +352,36 @@ export default function CustomersPage() {
                         <p className="text-xs font-medium text-gray-500 mb-2">Assigned Nodes:</p>
                         <div className="space-y-1">
                           {siteNodes.map(node => (
-                            <div key={node.id} className="text-xs bg-gray-50 px-2 py-1 rounded">
-                              {node.name || node.node_id}
+                            <div key={node.id} className="flex justify-between items-center text-xs bg-gray-50 px-2 py-1 rounded">
+                              <span>{node.name || node.node_id}</span>
+                              <button
+                                onClick={async () => {
+                                  if (confirm(`Unassign ${node.name || node.node_id} from this site?`)) {
+                                    try {
+                                      const response = await fetch('/api/nodes/unassign', {
+                                        method: 'POST',
+                                        headers: {
+                                          'Content-Type': 'application/json',
+                                          'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+                                        },
+                                        body: JSON.stringify({ node_id: node.id })
+                                      });
+                                      
+                                      if (response.ok) {
+                                        toast.success('Node unassigned successfully');
+                                        fetchData();
+                                      } else {
+                                        toast.error('Failed to unassign node');
+                                      }
+                                    } catch (error) {
+                                      toast.error('Network error');
+                                    }
+                                  }
+                                }}
+                                className="text-red-600 hover:text-red-800 ml-2"
+                              >
+                                ✕
+                              </button>
                             </div>
                           ))}
                         </div>
@@ -379,6 +412,7 @@ export default function CustomersPage() {
                   <thead className="bg-gray-50">
                     <tr>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Node ID</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">MAC Address</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Last Seen</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
@@ -387,7 +421,13 @@ export default function CustomersPage() {
                   <tbody className="bg-white divide-y divide-gray-200">
                     {getUnassignedNodes().map((node) => (
                       <tr key={node.id}>
-                        <td className="px-6 py-4 whitespace-nowrap font-medium">{node.node_id}</td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div>
+                            <div className="font-medium">{node.node_id}</div>
+                            <div className="text-xs text-gray-500">UUID: {node.uuid?.substring(0, 8)}...</div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{node.mac_address || 'N/A'}</td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span className={`px-2 py-1 text-xs rounded-full ${
                             node.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'

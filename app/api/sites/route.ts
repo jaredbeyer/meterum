@@ -17,6 +17,7 @@ export async function GET(request: NextRequest) {
         *,
         customers (
           id,
+          uuid,
           name
         )
       `)

@@ -13,7 +13,7 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    const { nodeId, version, ipAddress } = await request.json();
+    const { nodeId, version, ipAddress, macAddress } = await request.json();
     
     if (!nodeId) {
       return NextResponse.json(
@@ -25,20 +25,27 @@ export async function POST(request: NextRequest) {
     // Check if node exists
     const { data: existingNode, error: fetchError } = await supabaseAdmin
       .from('nodes')
-      .select('id, site_id, name, status')
+      .select('id, site_id, name, status, uuid')
       .eq('node_id', nodeId)
       .single();
     
     if (existingNode && !fetchError) {
-      // Update existing node
+      // Update existing node with MAC address if provided
+      const updateData: any = {
+        last_seen: new Date().toISOString(),
+        version: version || null,
+        ip_address: ipAddress || null,
+        status: 'active'
+      };
+      
+      // Add MAC address if provided and different from existing
+      if (macAddress) {
+        updateData.mac_address = macAddress;
+      }
+      
       const { error: updateError } = await supabaseAdmin
         .from('nodes')
-        .update({
-          last_seen: new Date().toISOString(),
-          version: version || null,
-          ip_address: ipAddress || null,
-          status: 'active'
-        })
+        .update(updateData)
         .eq('node_id', nodeId);
       
       if (updateError) {
@@ -49,20 +56,28 @@ export async function POST(request: NextRequest) {
         nodeId,
         status: 'updated',
         siteId: existingNode.site_id,
-        name: existingNode.name
+        name: existingNode.name,
+        uuid: existingNode.uuid
       });
     } else {
-      // Register new node
+      // Register new node with MAC address
+      const insertData: any = {
+        node_id: nodeId,
+        version: version || null,
+        ip_address: ipAddress || null,
+        last_seen: new Date().toISOString(),
+        status: 'pending'
+      };
+      
+      // Add MAC address if provided
+      if (macAddress) {
+        insertData.mac_address = macAddress;
+      }
+      
       const { data: newNode, error: insertError } = await supabaseAdmin
         .from('nodes')
-        .insert({
-          node_id: nodeId,
-          version: version || null,
-          ip_address: ipAddress || null,
-          last_seen: new Date().toISOString(),
-          status: 'pending'
-        })
-        .select('id')
+        .insert(insertData)
+        .select('id, uuid')
         .single();
       
       if (insertError) {
@@ -73,6 +88,7 @@ export async function POST(request: NextRequest) {
         nodeId,
         status: 'registered',
         id: newNode.id,
+        uuid: newNode.uuid,
         message: 'Node registered. Awaiting site assignment.'
       });
     }

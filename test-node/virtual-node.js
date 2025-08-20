@@ -63,6 +63,19 @@ function displayBanner() {
   console.log('');
 }
 
+// Generate a virtual MAC address for testing
+function generateVirtualMacAddress() {
+  // Generate a consistent MAC based on NODE_ID for testing
+  const hash = CONFIG.NODE_ID.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+  const bytes = [];
+  for (let i = 0; i < 6; i++) {
+    bytes.push(((hash * (i + 1)) % 256).toString(16).padStart(2, '0').toUpperCase());
+  }
+  // Set the locally administered bit (second character should be 2, 6, A, or E)
+  bytes[0] = '02'; // Locally administered, unicast
+  return bytes.join(':');
+}
+
 // HTTP request helper
 async function makeRequest(method, url, data = null) {
   const headers = {
@@ -92,10 +105,14 @@ async function registerNode() {
   try {
     log('INFO', `Registering node ${CONFIG.NODE_ID} with server...`);
     
+    // Generate a virtual MAC address for testing
+    const virtualMac = generateVirtualMacAddress();
+    
     const response = await makeRequest('POST', '/api/nodes/register', {
       nodeId: CONFIG.NODE_ID,
       version: '1.0.0-virtual',
-      ipAddress: '127.0.0.1'
+      ipAddress: '127.0.0.1',
+      macAddress: virtualMac
     });
     
     log('SUCCESS', 'Node registered successfully!', response);
