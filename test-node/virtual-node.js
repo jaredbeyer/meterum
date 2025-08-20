@@ -275,7 +275,7 @@ function displayStatus() {
   console.log('─'.repeat(56));
   console.log(`${colors.bright}Status:${colors.reset}`);
   console.log(`  Registration: ${isRegistered ? colors.green + '✓ Registered' : colors.red + '✗ Not registered'}${colors.reset}`);
-  console.log(`  Last Activity: ${colors.cyan}${new Date().toLocaleTimeString()}${colors.reset}`);
+  console.log(`  Last Activity: ${colors.cyan}${new Date().toLocaleTimeString('en-US', { timeZone: 'America/Chicago', hour12: true })}${colors.reset}`);
   if (simulatedMeters.length > 0) {
     console.log(`  Virtual Meters: ${colors.cyan}${simulatedMeters.length} active${colors.reset}`);
     console.log(`  Channels/Meter: ${colors.cyan}6${colors.reset}`);

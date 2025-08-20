@@ -102,8 +102,9 @@ export default function NodeLogViewer({ nodeId, nodeName, authToken }: NodeLogVi
   const formatTimestamp = (timestamp: string) => {
     const date = new Date(timestamp);
     return date.toLocaleTimeString('en-US', { 
-      hour12: false,
-      hour: '2-digit',
+      timeZone: 'America/Chicago',
+      hour12: true,
+      hour: 'numeric',
       minute: '2-digit',
       second: '2-digit'
     });

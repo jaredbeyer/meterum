@@ -75,7 +75,15 @@ export default function DashboardPage() {
 
   const formatDate = (dateStr: string) => {
     if (!dateStr) return 'Never';
-    return new Date(dateStr).toLocaleString();
+    return new Date(dateStr).toLocaleString('en-US', {
+      timeZone: 'America/Chicago',
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true
+    });
   };
 
   if (loading) {
