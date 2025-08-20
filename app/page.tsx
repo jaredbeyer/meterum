@@ -22,12 +22,18 @@ export default function Home() {
             <p className="text-gray-600">Monitor 42 CT channels per meter in real-time</p>
           </div>
         </div>
-        <div className="mt-12 text-center">
+        <div className="mt-12 text-center space-x-4">
+          <a
+            href="/login"
+            className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition inline-block"
+          >
+            Login
+          </a>
           <a
             href="/dashboard"
-            className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition"
+            className="bg-gray-600 text-white px-6 py-3 rounded-lg hover:bg-gray-700 transition inline-block"
           >
-            Access Dashboard
+            Dashboard
           </a>
         </div>
       </div>
