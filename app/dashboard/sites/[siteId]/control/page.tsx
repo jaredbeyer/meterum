@@ -207,7 +207,7 @@ export default function SiteControlPage() {
             </div>
             <div className="flex space-x-3">
               <button
-                onClick={() => setShowScheduler(!showScheduler)}
+                onClick={() => router.push(`/dashboard/sites/${siteId}/schedules`)}
                 className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
               >
                 📅 Schedules
