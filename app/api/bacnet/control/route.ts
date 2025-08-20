@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '../../../../lib/supabase';
 import { verifyToken } from '../../../../lib/auth';
+import { canAccessSite } from '../../../../lib/authorization';
 
 // POST - Write to a BACnet point
 export async function POST(request: NextRequest) {
@@ -36,7 +37,8 @@ export async function POST(request: NextRequest) {
           node_id,
           device_instance,
           ip_address,
-          is_online
+          is_online,
+          site_id
         )
       `)
       .eq('id', pointId)
@@ -46,6 +48,20 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: 'Point not found' },
         { status: 404 }
+      );
+    }
+    
+    // Check if user has control permission for this site
+    const hasPermission = await canAccessSite(
+      token || '',
+      point.bacnet_devices.site_id,
+      'control'
+    );
+    
+    if (!hasPermission) {
+      return NextResponse.json(
+        { error: 'You do not have control permission for this site' },
+        { status: 403 }
       );
     }
     

@@ -30,13 +30,18 @@ export default function LoginPage() {
       if (response.ok) {
         // Store token and user info
         localStorage.setItem('authToken', data.token);
+        localStorage.setItem('token', data.token);
         localStorage.setItem('user', JSON.stringify(data.user));
         
         toast.success('Login successful!');
         
-        // Redirect to dashboard
+        // Redirect based on user role
         setTimeout(() => {
-          router.push('/dashboard');
+          if (data.user.role === 'admin') {
+            router.push('/dashboard');
+          } else {
+            router.push('/dashboard/customer');
+          }
         }, 1000);
       } else {
         toast.error(data.error || 'Login failed');

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import toast, { Toaster } from 'react-hot-toast';
+import AdminPointEditor from '../../../components/AdminPointEditor';
 
 interface Site {
   id: number;
@@ -31,6 +32,7 @@ interface BACnetDevice {
 interface BACnetPoint {
   id: number;
   object_name: string;
+  display_name?: string;
   description: string;
   present_value: string;
   units: string;
@@ -58,16 +60,30 @@ export default function SiteControlPage() {
   const [devices, setDevices] = useState<BACnetDevice[]>([]);
   const [zones, setZones] = useState<ControlZone[]>([]);
   const [selectedCategory, setSelectedCategory] = useState('all');
+  const [userRole, setUserRole] = useState<string>('customer');
+  const [canControl, setCanControl] = useState(false);
   const [selectedPoint, setSelectedPoint] = useState<BACnetPoint | null>(null);
   const [controlValue, setControlValue] = useState('');
   const [showScheduler, setShowScheduler] = useState(false);
 
   useEffect(() => {
-    const authToken = localStorage.getItem('authToken');
+    const authToken = localStorage.getItem('authToken') || localStorage.getItem('token');
     if (!authToken) {
       router.push('/login');
       return;
     }
+    
+    // Check user role and permissions
+    try {
+      const tokenParts = authToken.split('.');
+      if (tokenParts.length === 3) {
+        const payload = JSON.parse(atob(tokenParts[1]));
+        setUserRole(payload.role || 'customer');
+      }
+    } catch (error) {
+      console.error('Error parsing token:', error);
+    }
+    
     fetchSiteData();
   }, [siteId, router]);
 
@@ -263,18 +279,15 @@ export default function SiteControlPage() {
               <div className="p-4 space-y-3">
                 {zone.points.map(point => (
                   <div key={point.id} className="border rounded-lg p-3 hover:bg-gray-50">
-                    <div className="flex justify-between items-start mb-2">
-                      <div className="flex-1">
-                        <h4 className="font-medium text-sm text-gray-900">
-                          {point.object_name}
-                        </h4>
-                        <p className="text-xs text-gray-500">{point.description}</p>
-                      </div>
-                      {point.is_writable && (
-                        <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded">
-                          Control
-                        </span>
-                      )}
+                    <div className="mb-2">
+                      <AdminPointEditor
+                        point={point}
+                        isAdmin={userRole === 'admin'}
+                        onUpdate={(pointId, displayName) => {
+                          // Update local state when display name changes
+                          point.display_name = displayName;
+                        }}
+                      />
                     </div>
                     
                     <div className="flex items-center justify-between">
@@ -282,7 +295,7 @@ export default function SiteControlPage() {
                         {point.present_value} {point.units}
                       </div>
                       
-                      {point.is_writable && (
+                      {point.is_writable && (userRole === 'admin' || canControl) && (
                         <div className="flex space-x-1">
                           {point.point_type === 'Switch' ? (
                             <>
