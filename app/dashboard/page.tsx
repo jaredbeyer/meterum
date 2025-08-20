@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import toast, { Toaster } from 'react-hot-toast';
+import NodeLogViewer from '../components/NodeLogViewer';
 
 interface Node {
   id: number;
@@ -21,6 +22,7 @@ export default function DashboardPage() {
   const [nodes, setNodes] = useState<Node[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('overview');
+  const [selectedNodeForLogs, setSelectedNodeForLogs] = useState<Node | null>(null);
 
   useEffect(() => {
     // Check authentication
@@ -196,17 +198,18 @@ export default function DashboardPage() {
         )}
 
         {activeTab === 'nodes' && (
-          <div className="bg-white rounded-lg shadow">
-            <div className="px-6 py-4 border-b flex justify-between items-center">
-              <h2 className="text-lg font-medium text-gray-900">Registered Nodes</h2>
-              <button
-                onClick={fetchNodes}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm transition"
-              >
-                Refresh
-              </button>
-            </div>
-            <div className="overflow-x-auto">
+          <div className="space-y-6">
+            <div className="bg-white rounded-lg shadow">
+              <div className="px-6 py-4 border-b flex justify-between items-center">
+                <h2 className="text-lg font-medium text-gray-900">Registered Nodes</h2>
+                <button
+                  onClick={fetchNodes}
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm transition"
+                >
+                  Refresh
+                </button>
+              </div>
+              <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
@@ -224,6 +227,9 @@ export default function DashboardPage() {
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Last Seen
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Actions
                     </th>
                   </tr>
                 </thead>
@@ -247,6 +253,14 @@ export default function DashboardPage() {
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         {formatDate(node.last_seen)}
                       </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm">
+                        <button
+                          onClick={() => setSelectedNodeForLogs(node)}
+                          className="text-blue-600 hover:text-blue-800 font-medium"
+                        >
+                          View Logs
+                        </button>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -261,6 +275,27 @@ export default function DashboardPage() {
               )}
             </div>
           </div>
+          
+          {/* Node Log Viewer */}
+          {selectedNodeForLogs && (
+            <div className="mt-6">
+              <div className="flex justify-between items-center mb-2">
+                <h3 className="text-lg font-medium text-gray-900">Node Activity Logs</h3>
+                <button
+                  onClick={() => setSelectedNodeForLogs(null)}
+                  className="text-gray-500 hover:text-gray-700"
+                >
+                  ✕ Close
+                </button>
+              </div>
+              <NodeLogViewer
+                nodeId={selectedNodeForLogs.id}
+                nodeName={selectedNodeForLogs.name || selectedNodeForLogs.node_id}
+                authToken={localStorage.getItem('authToken') || ''}
+              />
+            </div>
+          )}
+        </div>
         )}
 
         {activeTab === 'meters' && (

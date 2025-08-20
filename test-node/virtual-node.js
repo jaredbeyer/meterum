@@ -16,6 +16,8 @@ const CONFIG = {
 let isRegistered = false;
 let nodeConfig = null;
 let simulatedMeters = [];
+let logBuffer = [];
+const MAX_LOG_BUFFER = 50;
 
 // Colors for console output
 const colors = {
@@ -44,6 +46,19 @@ function log(level, message, data = null) {
   console.log(`${color}[${timestamp}] [${level}]${colors.reset} ${message}`);
   if (data) {
     console.log(JSON.stringify(data, null, 2));
+  }
+  
+  // Add to log buffer for sending to server
+  logBuffer.push({
+    level,
+    message,
+    metadata: data,
+    timestamp
+  });
+  
+  // Keep buffer size limited
+  if (logBuffer.length > MAX_LOG_BUFFER) {
+    logBuffer.shift();
   }
 }
 
@@ -214,6 +229,30 @@ async function collectData() {
   }
 }
 
+// Submit logs to server
+async function submitLogs() {
+  if (!isRegistered || logBuffer.length === 0) {
+    return;
+  }
+  
+  const logsToSend = [...logBuffer];
+  logBuffer = []; // Clear buffer
+  
+  try {
+    await makeRequest('POST', '/api/nodes/logs', {
+      nodeId: CONFIG.NODE_ID,
+      logs: logsToSend
+    });
+    
+    // Don't log this to avoid infinite loop
+    console.log(`${colors.cyan}[LOG]${colors.reset} Sent ${logsToSend.length} logs to server`);
+  } catch (error) {
+    // Re-add logs to buffer on failure
+    logBuffer = [...logsToSend, ...logBuffer].slice(-MAX_LOG_BUFFER);
+    console.error(`Failed to submit logs: ${error.message}`);
+  }
+}
+
 // Submit data to server
 async function submitData(timestamp, readings) {
   try {
@@ -278,6 +317,11 @@ function scheduleJobs() {
     await collectData();
     displayStatus();
   });
+  
+  // Send logs to server every 30 seconds
+  setInterval(async () => {
+    await submitLogs();
+  }, 30000);
   
   // Configuration check every 5 minutes
   cron.schedule('*/5 * * * *', async () => {
