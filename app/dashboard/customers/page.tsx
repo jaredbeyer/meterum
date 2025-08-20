@@ -347,6 +347,22 @@ export default function CustomersPage() {
                       <p>🕐 {site.timezone}</p>
                       <p>📡 {siteNodes.length} nodes assigned</p>
                     </div>
+                    
+                    <div className="mt-4 pt-4 border-t flex space-x-2">
+                      <a
+                        href={`/dashboard/sites/${site.id}/control`}
+                        className="flex-1 text-center text-xs bg-blue-600 text-white px-3 py-2 rounded hover:bg-blue-700 transition"
+                      >
+                        🎮 Control
+                      </a>
+                      <button
+                        onClick={() => router.push(`/dashboard/sites/${site.id}/energy`)}
+                        className="flex-1 text-center text-xs bg-green-600 text-white px-3 py-2 rounded hover:bg-green-700 transition"
+                      >
+                        ⚡ Energy
+                      </button>
+                    </div>
+                    
                     {siteNodes.length > 0 && (
                       <div className="mt-4 pt-4 border-t">
                         <p className="text-xs font-medium text-gray-500 mb-2">Assigned Nodes:</p>

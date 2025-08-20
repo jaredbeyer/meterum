@@ -1,6 +1,7 @@
 const axios = require('axios');
 const cron = require('node-cron');
 require('dotenv').config();
+const VirtualBACnet = require('./virtual-bacnet');
 
 // Configuration
 const CONFIG = {
@@ -18,6 +19,9 @@ let nodeConfig = null;
 let simulatedMeters = [];
 let logBuffer = [];
 const MAX_LOG_BUFFER = 50;
+let virtualBacnet = null;
+let bacnetDevices = [];
+let bacnetPoints = [];
 
 // Colors for console output
 const colors = {
@@ -284,6 +288,139 @@ function displayStatus() {
   console.log('─'.repeat(56));
 }
 
+// Initialize BACnet
+async function initializeBACnet() {
+  log('INFO', 'Initializing virtual BACnet system...');
+  
+  virtualBacnet = new VirtualBACnet();
+  
+  // Perform initial discovery
+  await discoverBACnetDevices();
+  
+  log('SUCCESS', `BACnet initialized with ${bacnetDevices.length} devices and ${bacnetPoints.length} points`);
+}
+
+// Discover BACnet devices
+async function discoverBACnetDevices() {
+  log('INFO', 'Discovering BACnet devices...');
+  
+  const discovery = await virtualBacnet.discoverDevices();
+  bacnetDevices = discovery.devices;
+  bacnetPoints = discovery.points;
+  
+  // Send discovered devices to server
+  for (const device of bacnetDevices) {
+    await sendBACnetDevice(device);
+  }
+  
+  // Send discovered points to server
+  for (const point of bacnetPoints) {
+    await sendBACnetPoint(point);
+  }
+  
+  log('SUCCESS', `Discovered ${bacnetDevices.length} devices with ${bacnetPoints.length} points`);
+}
+
+// Send BACnet device to server
+async function sendBACnetDevice(device) {
+  try {
+    await makeRequest('POST', '/api/bacnet/devices', {
+      nodeId: CONFIG.NODE_ID,
+      device: {
+        device_instance: device.deviceId,
+        ip_address: device.address,
+        vendor_id: device.vendorId,
+        vendor_name: device.vendorName,
+        model_name: device.modelName,
+        device_name: device.deviceName,
+        device_type: device.deviceType,
+        location: device.location,
+        is_online: device.isOnline
+      }
+    });
+  } catch (error) {
+    log('WARN', `Failed to send device ${device.deviceName}: ${error.message}`);
+  }
+}
+
+// Send BACnet point to server
+async function sendBACnetPoint(point) {
+  try {
+    await makeRequest('POST', '/api/bacnet/points', {
+      nodeId: CONFIG.NODE_ID,
+      point: {
+        device_address: point.deviceAddress,
+        device_id: point.deviceId,
+        object_type: point.objectType,
+        object_instance: point.objectInstance,
+        object_name: point.objectName,
+        description: point.description,
+        present_value: String(point.presentValue),
+        units: point.units,
+        is_writable: point.isWritable,
+        point_type: point.pointType,
+        point_category: point.pointCategory,
+        min_value: point.minValue,
+        max_value: point.maxValue
+      }
+    });
+  } catch (error) {
+    log('WARN', `Failed to send point ${point.objectName}: ${error.message}`);
+  }
+}
+
+// Fetch and process control commands
+async function processControlCommands() {
+  try {
+    const response = await makeRequest('GET', `/api/nodes/${CONFIG.NODE_ID}/control-commands`);
+    
+    if (response && response.commands) {
+      for (const command of response.commands) {
+        await executeControlCommand(command);
+      }
+    }
+  } catch (error) {
+    // Control commands endpoint might not exist yet
+  }
+}
+
+// Execute control command
+async function executeControlCommand(command) {
+  try {
+    log('INFO', `Executing control command: ${command.command_type} for point ${command.point_id}`);
+    
+    if (command.command_type === 'WRITE') {
+      const point = bacnetPoints.find(p => 
+        p.objectType === command.object_type && 
+        p.objectInstance === command.object_instance
+      );
+      
+      if (point) {
+        const value = parseFloat(command.target_value);
+        await virtualBacnet.writePoint(
+          point.deviceAddress,
+          point.objectType,
+          point.objectInstance,
+          value,
+          command.priority || 10
+        );
+        
+        log('SUCCESS', `Set ${point.objectName} to ${value}`);
+        
+        // Report success
+        await makeRequest('POST', '/api/bacnet/commands/result', {
+          commandId: command.id,
+          status: 'completed',
+          responseValue: value,
+          executedAt: new Date().toISOString()
+        });
+      }
+    }
+  } catch (error) {
+    log('ERROR', `Failed to execute command: ${error.message}`);
+  }
+}
+
 // Main function
 async function main() {
   displayBanner();
@@ -291,6 +428,9 @@ async function main() {
   try {
     // Register node
     await registerNode();
+    
+    // Initialize BACnet
+    await initializeBACnet();
     
     // Fetch initial configuration
     await fetchConfig();
@@ -323,10 +463,24 @@ function scheduleJobs() {
     await submitLogs();
   }, 30000);
   
+  // Check for control commands every 5 seconds
+  setInterval(async () => {
+    if (isRegistered) {
+      await processControlCommands();
+    }
+  }, 5000);
+  
   // Configuration check every 5 minutes
   cron.schedule('*/5 * * * *', async () => {
     if (isRegistered) {
       await fetchConfig();
+    }
+  });
+  
+  // BACnet discovery every hour
+  cron.schedule('0 * * * *', async () => {
+    if (isRegistered && virtualBacnet) {
+      await discoverBACnetDevices();
     }
   });
   

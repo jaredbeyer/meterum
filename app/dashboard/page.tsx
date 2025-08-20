@@ -128,7 +128,7 @@ export default function DashboardPage() {
       <div className="bg-white border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <nav className="flex space-x-8">
-            {['overview', 'nodes', 'meters', 'customers', 'analytics'].map((tab) => (
+            {['overview', 'nodes', 'meters', 'control', 'customers', 'analytics'].map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
@@ -315,6 +315,19 @@ export default function DashboardPage() {
               className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 inline-block"
             >
               Go to Meter Configuration →
+            </a>
+          </div>
+        )}
+
+        {activeTab === 'control' && (
+          <div className="bg-white rounded-lg shadow p-6">
+            <h2 className="text-lg font-medium text-gray-900 mb-4">Building Control System</h2>
+            <p className="text-gray-500 mb-4">Discover and control BACnet devices for HVAC, lighting, and other building systems.</p>
+            <a
+              href="/dashboard/control"
+              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 inline-block"
+            >
+              Open Control System →
             </a>
           </div>
         )}
