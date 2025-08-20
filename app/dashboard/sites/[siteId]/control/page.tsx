@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import toast, { Toaster } from 'react-hot-toast';
-import AdminPointEditor from '../../../components/AdminPointEditor';
+import AdminPointEditor from '../../../../components/AdminPointEditor';
 
 interface Site {
   id: number;

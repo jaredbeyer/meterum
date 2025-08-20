@@ -62,7 +62,7 @@ export async function PUT(
       parseInt(pointId),
       { display_name: currentPoint?.display_name },
       { display_name },
-      request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip'),
+      request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || undefined,
       request.headers.get('user-agent') || undefined
     );
 
