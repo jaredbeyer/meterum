@@ -61,11 +61,19 @@ export function useAuth() {
         setAuthState({ user: data.user, loading: false, error: null });
         toast.success('Login successful!');
         
-        if (data.user.role === 'admin') {
-          router.push('/dashboard');
-        } else {
-          router.push('/sites');
-        }
+        // Add slight delay to ensure state updates
+        setTimeout(() => {
+          if (data.user.role === 'admin') {
+            console.log('Navigating to /dashboard for admin');
+            router.push('/dashboard');
+          } else if (data.user.role === 'customer') {
+            console.log('Navigating to /dashboard/customer');
+            router.push('/dashboard/customer');
+          } else {
+            console.log('Navigating to /dashboard for role:', data.user.role);
+            router.push('/dashboard');
+          }
+        }, 100);
         
         return { success: true };
       } else {
@@ -89,9 +97,15 @@ export function useAuth() {
       });
       
       setAuthState({ user: null, loading: false, error: null });
-      localStorage.removeItem('authToken');
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
+      
+      // Clean up any old localStorage (backwards compatibility)
+      try {
+        localStorage.removeItem('authToken');
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+      } catch (e) {
+        // Ignore localStorage errors
+      }
       
       toast.success('Logged out successfully');
       router.push('/login');
