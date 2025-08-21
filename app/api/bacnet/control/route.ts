@@ -1,31 +1,30 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '../../../../lib/supabase';
-import { verifyToken } from '../../../../lib/auth';
-import { canAccessSite } from '../../../../lib/authorization';
+import { withAuth } from '../../../../lib/api-auth';
+import { canAccessSite } from '../../../../lib/authorization-helpers';
+import { z } from 'zod';
+import { validateBody, validationErrorResponse } from '../../../../lib/validation/validate';
+import { withRateLimit } from '../../../../lib/rate-limit';
+
+// Validation schema for control request
+const controlSchema = z.object({
+  pointId: z.number().positive(),
+  value: z.union([z.string(), z.number(), z.boolean()]),
+  priority: z.number().min(1).max(16).default(10)
+});
 
 // POST - Write to a BACnet point
 export async function POST(request: NextRequest) {
-  try {
-    // Check authentication
-    const authHeader = request.headers.get('authorization');
-    const token = authHeader?.replace('Bearer ', '');
-    
-    const userData = verifyToken(token || '');
-    if (!userData) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-    
-    const { pointId, value, priority = 10 } = await request.json();
-    
-    if (!pointId || value === undefined) {
-      return NextResponse.json(
-        { error: 'Point ID and value required' },
-        { status: 400 }
-      );
-    }
+  return withRateLimit(request, 'sensitive', async () => {
+    return withAuth(request, async (req) => {
+    try {
+      // Validate request body
+      const validation = await validateBody(request, controlSchema);
+      if (!validation.success) {
+        return validationErrorResponse(validation.errors!);
+      }
+      
+      const { pointId, value, priority } = validation.data!;
     
     // Get point information
     const { data: point, error: pointError } = await supabaseAdmin
@@ -51,12 +50,19 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    // Check if user has control permission for this site
-    const hasPermission = await canAccessSite(
-      token || '',
-      point.bacnet_devices.site_id,
-      'control'
-    );
+      // Check if user has control permission for this site
+      if (!req.user) {
+        return NextResponse.json(
+          { error: 'Unauthorized' },
+          { status: 401 }
+        );
+      }
+      
+      const hasPermission = await canAccessSite(
+        req.user.userId,
+        point.bacnet_devices.site_id,
+        'control'
+      );
     
     if (!hasPermission) {
       return NextResponse.json(
@@ -83,7 +89,7 @@ export async function POST(request: NextRequest) {
     
     // Validate value based on point type
     if (point.object_type <= 2) { // Analog types
-      const numValue = parseFloat(value);
+      const numValue = parseFloat(String(value));
       if (isNaN(numValue)) {
         return NextResponse.json(
           { error: 'Invalid numeric value' },
@@ -115,7 +121,7 @@ export async function POST(request: NextRequest) {
         target_value: value.toString(),
         priority: priority,
         status: 'pending',
-        requested_by: userData.userId,
+        requested_by: req.user!.userId,
         requested_at: new Date().toISOString()
       })
       .select()
@@ -136,7 +142,7 @@ export async function POST(request: NextRequest) {
           pointId,
           value,
           priority,
-          requestedBy: userData.username
+          requestedBy: req.user!.username
         },
         timestamp: new Date().toISOString()
       });
@@ -152,28 +158,21 @@ export async function POST(request: NextRequest) {
       }
     });
     
-  } catch (error) {
-    console.error('Control command error:', error);
-    return NextResponse.json(
-      { error: 'Failed to send control command' },
-      { status: 500 }
-    );
-  }
+    } catch (error) {
+      console.error('Control command error:', error);
+      return NextResponse.json(
+        { error: 'Failed to send control command' },
+        { status: 500 }
+      );
+      }
+    });
+  });
 }
 
 // GET - Get point value and history
 export async function GET(request: NextRequest) {
-  try {
-    // Check authentication
-    const authHeader = request.headers.get('authorization');
-    const token = authHeader?.replace('Bearer ', '');
-    
-    if (!token || !verifyToken(token)) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
+  return withAuth(request, async (req) => {
+    try {
     
     const { searchParams } = new URL(request.url);
     const pointId = searchParams.get('pointId');
@@ -241,31 +240,21 @@ export async function GET(request: NextRequest) {
       recentCommands: recentCommands || []
     });
     
-  } catch (error) {
-    console.error('Failed to fetch point data:', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch point data' },
-      { status: 500 }
-    );
-  }
+    } catch (error) {
+      console.error('Failed to fetch point data:', error);
+      return NextResponse.json(
+        { error: 'Failed to fetch point data' },
+        { status: 500 }
+      );
+    }
+  });
 }
 
 // PUT - Release/relinquish control of a point
 export async function PUT(request: NextRequest) {
-  try {
-    // Check authentication
-    const authHeader = request.headers.get('authorization');
-    const token = authHeader?.replace('Bearer ', '');
-    
-    const userData = verifyToken(token || '');
-    if (!userData) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-    
-    const { pointId, priority = 10 } = await request.json();
+  return withAuth(request, async (req) => {
+    try {
+      const { pointId, priority = 10 } = await request.json();
     
     if (!pointId) {
       return NextResponse.json(
@@ -282,7 +271,7 @@ export async function PUT(request: NextRequest) {
         command_type: 'RELEASE',
         priority: priority,
         status: 'pending',
-        requested_by: userData.userId,
+        requested_by: req.user!.userId,
         requested_at: new Date().toISOString()
       })
       .select()
@@ -298,11 +287,12 @@ export async function PUT(request: NextRequest) {
       commandId: command.id
     });
     
-  } catch (error) {
-    console.error('Release command error:', error);
-    return NextResponse.json(
-      { error: 'Failed to release control' },
-      { status: 500 }
-    );
-  }
+    } catch (error) {
+      console.error('Release command error:', error);
+      return NextResponse.json(
+        { error: 'Failed to release control' },
+        { status: 500 }
+      );
+    }
+  });
 }

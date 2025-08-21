@@ -1,19 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '../../../../lib/supabase';
-import { verifyNodeApiKey } from '../../../../lib/auth';
+import { verifyNodeRequest } from '../../../../lib/node-auth';
+import { withRateLimit } from '../../../../lib/rate-limit';
 
 export async function POST(request: NextRequest) {
-  try {
-    const apiKey = request.headers.get('x-api-key');
-    
-    if (!verifyNodeApiKey(apiKey || '')) {
-      return NextResponse.json(
-        { error: 'Invalid API key' },
-        { status: 401 }
-      );
-    }
-    
-    const { nodeId, version, ipAddress, macAddress } = await request.json();
+  return withRateLimit(request, 'ingest', async () => {
+    try {
+      const bodyText = await request.text();
+      const body = JSON.parse(bodyText);
+      
+      // Verify node authentication with HMAC
+      const authResult = await verifyNodeRequest(request, bodyText);
+      if (!authResult.valid) {
+        return NextResponse.json(
+          { error: authResult.error || 'Invalid authentication' },
+          { status: 401 }
+        );
+      }
+      
+      const { nodeId, version, ipAddress, macAddress } = body;
     
     if (!nodeId) {
       return NextResponse.json(
@@ -92,11 +97,12 @@ export async function POST(request: NextRequest) {
         message: 'Node registered. Awaiting site assignment.'
       });
     }
-  } catch (error) {
-    console.error('Node registration error:', error);
-    return NextResponse.json(
-      { error: 'Registration failed' },
-      { status: 500 }
-    );
-  }
+    } catch (error) {
+      console.error('Node registration error:', error);
+      return NextResponse.json(
+        { error: 'Registration failed' },
+        { status: 500 }
+      );
+    }
+  });
 }

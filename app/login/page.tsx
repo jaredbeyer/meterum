@@ -1,11 +1,11 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import toast, { Toaster } from 'react-hot-toast';
+import { Toaster } from 'react-hot-toast';
+import { useAuth } from '../../hooks/useAuth';
 
 export default function LoginPage() {
-  const router = useRouter();
+  const { login } = useAuth();
   const [loading, setLoading] = useState(false);
   const [credentials, setCredentials] = useState({
     username: '',
@@ -16,42 +16,8 @@ export default function LoginPage() {
     e.preventDefault();
     setLoading(true);
 
-    try {
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(credentials),
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        // Store token and user info
-        localStorage.setItem('authToken', data.token);
-        localStorage.setItem('token', data.token);
-        localStorage.setItem('user', JSON.stringify(data.user));
-        
-        toast.success('Login successful!');
-        
-        // Redirect based on user role
-        setTimeout(() => {
-          if (data.user.role === 'admin') {
-            router.push('/dashboard');
-          } else {
-            router.push('/dashboard/customer');
-          }
-        }, 1000);
-      } else {
-        toast.error(data.error || 'Login failed');
-      }
-    } catch (error) {
-      toast.error('Network error. Please try again.');
-      console.error('Login error:', error);
-    } finally {
-      setLoading(false);
-    }
+    await login(credentials.username, credentials.password);
+    setLoading(false);
   };
 
   return (
