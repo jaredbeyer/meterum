@@ -7,6 +7,9 @@
 3. **API Routes** - Use local PostgreSQL
 4. **Authentication** - JWT-based auth with bcrypt password hashing
 
+---
+**Note:** All setup and deployment steps in this guide are for running Meterum entirely on your local server. You do not need to use Git, Vercel, or any cloud deployment service. All code, database, and services will run locally on your machine or internal network.
+
 ## 📋 Your Next Steps
 
 
@@ -34,7 +37,7 @@ npm run dev
 
 ```bash
 # Test health endpoint
-curl http://localhost:3000/api/health
+curl http://localhost:3001/api/health
 
 # You should see:
 # {"status":"healthy","timestamp":"...","database":{"connected":true}...}
