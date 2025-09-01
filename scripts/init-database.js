@@ -20,24 +20,22 @@ async function initDatabase() {
     // Read schema file
     const schema = fs.readFileSync(SCHEMA_PATH, 'utf8');
     console.log('✅ Schema file loaded');
-    
-    // Execute schema using psql
-    console.log('📝 Creating database tables...');
-    
-    // For Vercel Postgres, we need to use the @vercel/postgres package
-    // This is a simplified version - in production, use proper migration tools
-    const { sql } = require('@vercel/postgres');
-    
+
+    // Use 'pg' for local PostgreSQL
+    const { Client } = require('pg');
+    const client = new Client({ connectionString: process.env.POSTGRES_URL });
+    await client.connect();
+
     // Parse and execute SQL statements
     const statements = schema
       .split(';')
       .map(s => s.trim())
       .filter(s => s.length > 0 && !s.startsWith('--'));
-    
+
     for (const statement of statements) {
       if (statement.length > 0) {
         try {
-          await sql.query(statement + ';');
+          await client.query(statement + ';');
           console.log('✅ Executed:', statement.substring(0, 50) + '...');
         } catch (error) {
           console.warn('⚠️  Warning:', error.message);
@@ -45,12 +43,13 @@ async function initDatabase() {
         }
       }
     }
-    
+
+    await client.end();
+
     console.log('✅ Database initialization complete!');
     console.log('');
     console.log('Next steps:');
     console.log('1. Run "npm run dev" to start development server');
-    console.log('2. Or "npm run deploy" to deploy to Vercel');
     
   } catch (error) {
     console.error('❌ Database initialization failed:', error);

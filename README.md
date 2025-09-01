@@ -13,7 +13,8 @@ Meterum provides comprehensive energy monitoring with:
 ## Architecture
 
 ```
-Cloud Infrastructure (Vercel + PostgreSQL)
+
+Cloud Infrastructure (Local Ubuntu Server + PostgreSQL)
 ├── Next.js Backend API
 ├── React Dashboard
 └── PostgreSQL Database
@@ -39,7 +40,7 @@ Field Deployment
 ### Prerequisites
 - Node.js 18+
 - PostgreSQL database
-- Vercel account
+
 - Raspberry Pi 3B+ or 4B
 - Veris E34 meters
 
@@ -62,9 +63,11 @@ cp .env.example .env.local
 # Edit .env.local with your configuration
 ```
 
-4. **Deploy backend to Vercel**
+
+4. **Start backend locally**
 ```bash
-vercel deploy --prod
+npm run build
+PORT=3001 npm start
 ```
 
 5. **Initialize database**

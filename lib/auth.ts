@@ -1,6 +1,6 @@
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
-import { supabaseAdmin } from './supabase';
+// import { supabaseAdmin } from './supabase';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 const NODE_API_KEY = process.env.NODE_API_KEY || 'node-secret-key';
@@ -21,11 +21,12 @@ export interface AuthResult {
 
 export async function authenticateUser(username: string, password: string): Promise<AuthResult> {
   try {
-    const { data, error } = await supabaseAdmin
-      .from('users')
-      .select('id, username, email, password_hash, role')
-      .or(`username.eq.${username},email.eq.${username}`)
-      .single();
+  // TODO: Replace Supabase logic with local PostgreSQL logic
+  // const { data, error } = await supabaseAdmin
+  //   .from('users')
+  //   .select('id, username, email, password_hash, role')
+  //   .or(`username.eq.${username},email.eq.${username}`)
+  //   .single();
     
     if (error || !data) {
       return { success: false, error: 'User not found' };
@@ -38,10 +39,10 @@ export async function authenticateUser(username: string, password: string): Prom
     }
     
     // Update last login
-    await supabaseAdmin
-      .from('users')
-      .update({ last_login: new Date().toISOString() })
-      .eq('id', data.id);
+  // await supabaseAdmin
+  //   .from('users')
+  //   .update({ last_login: new Date().toISOString() })
+  //   .eq('id', data.id);
     
     const token = jwt.sign(
       { userId: data.id, username: data.username, role: data.role },

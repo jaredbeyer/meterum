@@ -2,30 +2,23 @@
 
 ## ✅ What's Been Configured
 
-1. **Supabase Database Connection** - Your `.env.local` file is configured with Supabase credentials
-2. **Database Schema** - SQL script ready for Supabase
-3. **API Routes** - Updated to use Supabase instead of Vercel Postgres
+1. **Local PostgreSQL Database Connection** - Your `.env.local` file is configured for local PostgreSQL
+2. **Database Schema** - SQL script ready for PostgreSQL
+3. **API Routes** - Use local PostgreSQL
 4. **Authentication** - JWT-based auth with bcrypt password hashing
 
 ## 📋 Your Next Steps
 
-### Step 1: Initialize Supabase Database
 
-1. **Go to Supabase SQL Editor:**
-   ```
-   https://supabase.com/dashboard/project/vzbpsmghagcjirbjmiuj/sql/new
-   ```
+### Step 1: Initialize Local PostgreSQL Database
 
-2. **Copy and paste the entire contents of:**
-   ```
-   scripts/init-supabase.sql
+1. **Run the database initialization script:**
+   ```bash
+   npm run db:init
    ```
 
-3. **Click "Run" to create all tables**
-
-4. **Verify tables were created:**
-   - Go to Table Editor in Supabase dashboard
-   - You should see: users, customers, sites, nodes, meters, etc.
+2. **Verify tables were created:**
+   - Connect to your PostgreSQL instance and check for tables: users, customers, sites, nodes, meters, etc.
 
 ### Step 2: Install Dependencies & Test Locally
 
@@ -44,7 +37,7 @@ npm run dev
 curl http://localhost:3000/api/health
 
 # You should see:
-# {"status":"healthy","timestamp":"...","database":{"connected":true,"supabase":true}...}
+# {"status":"healthy","timestamp":"...","database":{"connected":true}...}
 ```
 
 ### Step 4: Test Authentication
@@ -68,26 +61,20 @@ curl -X POST http://localhost:3000/api/nodes/register \
   -d '{"nodeId":"TEST001","version":"1.0.0","ipAddress":"192.168.1.100"}'
 ```
 
-### Step 6: Deploy to Vercel
+
+### Step 6: Start Locally
 
 ```bash
-# Login to Vercel
-vercel login
-
-# Deploy (it will ask you questions on first deploy)
-vercel
-
-# For production deployment
-vercel --prod
-
-# Your app will be available at something like:
-# https://meterum.vercel.app
+# Build and start the app on your server
+npm run build
+PORT=3001 npm start
 ```
 
-### Step 7: Update Environment Variables in Vercel
 
-1. Go to: https://vercel.com/dashboard
-2. Select your meterum project
+### Step 7: Update Environment Variables
+
+1. Edit your `.env.local` file with your local database and secrets.
+2. Restart the app if you make changes.
 3. Go to Settings → Environment Variables
 4. Add all variables from `.env.local`
 
@@ -101,7 +88,7 @@ curl https://meterum.vercel.app/api/health
 ## 🔧 Troubleshooting
 
 ### Database Connection Issues
-- Check Supabase dashboard is accessible
+
 - Verify `.env.local` has correct credentials
 - Make sure tables were created in SQL editor
 
@@ -117,8 +104,7 @@ curl https://meterum.vercel.app/api/health
 
 ## 📊 Check Your Progress
 
-Visit Supabase Dashboard to monitor:
-- https://supabase.com/dashboard/project/vzbpsmghagcjirbjmiuj
+
 
 You can see:
 - Database tables and data
@@ -138,12 +124,12 @@ You can see:
 1. Change the default admin password
 2. Generate a secure `NODE_API_KEY`
 3. Use a strong `JWT_SECRET`
-4. Enable Row Level Security (RLS) policies in Supabase
+
 5. Set up proper CORS policies
 
 ## Need Help?
 
 - Check the main README.md for architecture overview
 - Review the `/docs` folder for detailed documentation
-- Check Supabase docs: https://supabase.com/docs
+
 - Check Vercel docs: https://vercel.com/docs
