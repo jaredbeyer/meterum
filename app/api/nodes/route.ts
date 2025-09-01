@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseAdmin } from '../../../lib/supabase';
 import { verifyToken } from '../../../lib/auth';
+
+import { Pool } from 'pg';
+const pool = new Pool({ connectionString: process.env.POSTGRES_URL });
 
 export async function GET(request: NextRequest) {
   try {
@@ -15,19 +17,11 @@ export async function GET(request: NextRequest) {
       );
     }
     
-    // Fetch all nodes
-    const { data: nodes, error } = await supabaseAdmin
-      .from('nodes')
-      .select('*')
-      .order('created_at', { ascending: false });
-    
-    if (error) {
-      throw error;
-    }
-    
+    // Fetch all nodes from local PostgreSQL
+    const result = await pool.query('SELECT * FROM nodes ORDER BY created_at DESC');
     return NextResponse.json({
-      nodes: nodes || [],
-      count: nodes?.length || 0
+      nodes: result.rows,
+      count: result.rowCount
     });
   } catch (error) {
     console.error('Failed to fetch nodes:', error);
